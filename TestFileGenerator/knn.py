@@ -1,6 +1,6 @@
 '''
 -----------------------------------------------------------------------------------------------
-Description:To find KNN in following test files using sequential algorithm (O(n)),
+Description:To find KNN in following test files using sequential algorithm (O(n log n)),
             Just for generating test files and answer files in a short time.
 -----------------------------------------------------------------------------------------------
 Author: Warren Liu
@@ -11,7 +11,7 @@ Date: 11/21/2022
 import math
 import os
 from datetime import datetime
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 FILE_LIST = ['100.txt', '1000.txt', '10000.txt', '25000.txt',
@@ -87,7 +87,7 @@ def distance(node_1: Node, node_2: Node):
 
 def knn(target_node: Node, coor_list: list[Node]):
     '''
-    Find the knn in O(N) time: 
+    Find the knn in O(n log n) time: 
     loop each node and calculate its distance to the target_node.
 
     Args:
@@ -115,6 +115,69 @@ def knn(target_node: Node, coor_list: list[Node]):
     # get the top K
     for _ in range(size):
         knn_list.append(not_knn_list.pop(0))
+
+    return knn_list, not_knn_list
+
+
+def knn_v2(target_node: Node, coor_list: list[Node]):
+    '''
+    KNN v2
+    Instead sort the whole list by distance_to_target in the end,
+    maintain a list that contains the top K,
+    and update the top_k list in each iteration.
+    To compare the excution time with the v1 to see if the performance is improved.
+    ***ANS: NO, IT'S NOT, WAY MUCH SLOWER***
+
+    Args:
+        `Node` target_node.
+        `Node List` coor_list: the list containing all test nodes.
+
+    Returns:
+        `Node List` knn_list: the list containing top {SIZE} knn.
+        `Node List` not_knn_list: the list containing other-than-knn nodes, 
+        for validating the result.
+    
+    '''
+    size = int(len(coor_list) / 10)
+    knn_list = []
+    knn_list_max = None
+    not_knn_list = []
+
+    # loop each node
+    for node in coor_list:
+        # calculate distance
+        node.distance_to_target = distance(target_node, node)
+
+        # if knn list is not full, simply append to knn list
+        if len(knn_list) < size:
+            knn_list.append(node)
+            if knn_list_max is None:
+                knn_list_max = node.distance_to_target
+            elif node.distance_to_target > knn_list_max:
+                knn_list_max = node.distance_to_target
+            
+            # when the knn list is full at the first time,
+            # sort the knn list, so the max node is in the end of the list
+            if len(knn_list) == size:
+                knn_list = sorted(knn_list, key=lambda x: x.distance_to_target)
+        
+        # if knn list is full
+        else:
+            # if this node's distance is greater than max,
+            # simply add to not knn list directly
+            if node.distance_to_target > knn_list_max:
+                not_knn_list.append(node)
+            
+            # if this node's distance is smaller then max
+            
+            else:
+                # the max is at the end of the knn_list,
+                # move knn_list[-1] to not_knn_list, replace it with current node
+                not_knn_list.append(knn_list[-1])
+                knn_list[-1] = node
+                # Sort the knn_list again, update the max
+                knn_list = sorted(knn_list, key=lambda x: x.distance_to_target)
+                knn_list_max = knn_list[-1].distance_to_target
 
     return knn_list, not_knn_list
 
@@ -161,24 +224,26 @@ def validate_res_list(knn_list: list[Node], not_knn_list: list[Node]):
 
 
 if __name__ == '__main__':
-    for file_name in os.listdir('./test_files'):
 
-        if not file_name.endswith('0.txt'):
-            continue
+    # Method 1: get all test file answers and validate
+    # for file_name in os.listdir('./test_files'):
 
-        start_time = datetime.today()
-        target_node, coor_list = load_nodes(file_name)
-        knn_list, not_knn_list = knn(target_node, coor_list)
-        end_time = datetime.today()
+    #     if not file_name.endswith('0.txt'):
+    #         continue
 
-        validate_ans = 'Validated' if validate_res_list(
-            knn_list, not_knn_list) else 'Wrong'
-        write_ans(file_name, target_node, knn_list)
-        print(
-            f'File: {file_name}, correctness: {validate_ans}, time elapsed: {(end_time - start_time).total_seconds()}')
+    #     start_time = datetime.today()
+    #     target_node, coor_list = load_nodes(file_name)
+    #     knn_list, not_knn_list = knn(target_node, coor_list)
+    #     end_time = datetime.today()
+
+    #     validate_ans = 'Validated' if validate_res_list(
+    #         knn_list, not_knn_list) else 'Wrong'
+    #     write_ans(file_name, target_node, knn_list)
+    #     print(
+    #         f'File: {file_name}, correctness: {validate_ans}, time elapsed: {(end_time - start_time).total_seconds()}')
 
 
-
+    # Mthod 2: Get a single file result plot, data visualization
     # file_name = '100000.txt'
 
     # start_time = datetime.today()
@@ -206,3 +271,29 @@ if __name__ == '__main__':
     # plt.scatter(x, y, c='gray')
 
     # plt.show()
+
+
+    # Method 3: compare single test file execution time
+    # by using different knn
+    # file_name = '1000000.txt'
+    # target_node, coor_list = load_nodes(file_name)
+
+    # print('done')
+
+    # start_time = datetime.today()
+    # knn_list, not_knn_list = knn(target_node, coor_list)
+    # end_time = datetime.today()
+
+    # validate_ans = 'Validated' if validate_res_list(
+    #     knn_list, not_knn_list) else 'Wrong'
+    # print(
+    #     f'KNN_v1: file: {file_name}, correctness: {validate_ans}, time elapsed: {(end_time - start_time).total_seconds()}')
+
+    # start_time = datetime.today()
+    # knn_list, not_knn_list = knn_v2(target_node, coor_list)
+    # end_time = datetime.today()
+
+    # validate_ans = 'Validated' if validate_res_list(
+    #     knn_list, not_knn_list) else 'Wrong'
+    # print(
+    #     f'KNN_v2: file: {file_name}, correctness: {validate_ans}, time elapsed: {(end_time - start_time).total_seconds()}')
