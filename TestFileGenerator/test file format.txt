@@ -1,3 +1,0 @@
-line 1: total test coordinates count
-line 2: the target coordinate: (x y)
-line 3 to the end: (line 1 of) test coordinates: (x y)

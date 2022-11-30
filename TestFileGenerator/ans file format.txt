@@ -1,2 +1,0 @@
-line 1: target coordinate: (x y)
-line 2 to the end: top (size_of_test_coordinates / 10) NN: (x y distance_to_target_node)
