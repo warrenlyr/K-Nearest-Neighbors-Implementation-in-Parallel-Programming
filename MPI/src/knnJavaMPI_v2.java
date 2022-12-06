@@ -15,7 +15,7 @@
 import mpi.*;
 import java.io.*;
 import java.util.*;
-import java.util.Date;
+import java.nio.file.*;
 import java.lang.Math;
 import java.sql.Timestamp;
 
@@ -28,20 +28,22 @@ class knnJavaMPI_v2{
     */
     public static class Global {
         // Basic variable
-        public static int MASTER = 0;
+        public static final int MASTER = 0;
         public static boolean PRINT_INFO = false;
+        public static final String OUTPUT_PATH = "./output/";
+        public static boolean WRITE_RESULT = false;
 
         // MPI Tag - Send - Sizes
-        public static int MPI_TAG_SEND_TEST_GROUP_SIZE = 101;
-        public static int MPI_TAG_SEND_TRAIN_GROUP_SIZE = 102;
-        public static int MPI_TAG_SEND_CHUNK_SIZE = 103;
+        public static final int MPI_TAG_SEND_TEST_GROUP_SIZE = 101;
+        public static final int MPI_TAG_SEND_TRAIN_GROUP_SIZE = 102;
+        public static final int MPI_TAG_SEND_CHUNK_SIZE = 103;
         //MPI Tag - Send - Data
-        public static int MPI_TAG_SEND_TEST_GROUP = 201;
-        public static int MPI_TAG_SEND_TRAIN_GROUP = 202;
+        public static final int MPI_TAG_SEND_TEST_GROUP = 201;
+        public static final int MPI_TAG_SEND_TRAIN_GROUP = 202;
         // MPI Tag - Receive - Data
-        public static int MPI_TAG_SEND_BACK_TOP_K = 301;
+        public static final int MPI_TAG_SEND_BACK_TOP_K = 301;
         // MPI Tag - Send - Error
-        public static int MPI_TAG_SEND_FILE_OPEN_ERROR = 401;
+        public static final int MPI_TAG_SEND_FILE_OPEN_ERROR = 401;
     }
 
 
@@ -240,10 +242,50 @@ class knnJavaMPI_v2{
 
     /*
      * Helper function to get current timestamp
+     * 
+     * @return Timestamp ts: current time.
      */
     static public String getCurrentTimestamp(){
-        Timestamp ts = new Timestamp(System.currentTimeMillis());
-        return ts.toString().split("\\.")[0];
+        String ts = new Timestamp(System.currentTimeMillis()).toString();
+        return ts;
+    }
+
+    /*
+     * Helper function to write knn result to file
+     * 
+     * @param: Node[] node_arr: the array contains all target nodes.
+     * @param int size: the size of rank.
+     * @param int k: the k for knn.
+     * 
+     * @return bool: true if successfully write, false otherwise.
+     */
+    static public boolean writeKnnResultToFile(Node[] node_arr, int size, int k){
+        try{
+            // Create output path if not exist
+            File output_path = new File(Global.OUTPUT_PATH);
+            output_path.mkdir();
+
+            // Create otuput file if not exist, over if exist
+            String file_output_path = Global.OUTPUT_PATH + "rank_" + size + "_k_" + k + ".txt";
+            File output_file = new File(file_output_path);
+            if(! output_file.exists()){
+                output_file.createNewFile();
+            }
+
+            FileWriter fw = new FileWriter(output_file.getPath());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for(Node target: node_arr){
+                bw.write(target.getResultForValidation());
+                bw.write("\n");
+            }
+
+            bw.close();
+            return true;
+        }
+        catch(IOException e){
+            return false;
+        }
     }
 
 
@@ -256,8 +298,10 @@ class knnJavaMPI_v2{
         // Validate args length
         if(args.length < 3){
             if(rank == Global.MASTER){
-                System.err.println("Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k> <optional: output_info>");
-                System.err.println("top_K: an integer. output_info: 1 or 0 (default), if 1 is entered, all information will be display while running.");
+                System.err.println("Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k> <optional: output_info> <optional: write_knn_result>");
+                System.err.println("top_K: an integer.");
+                System.err.println("output_info (optional): 1 or 0 (default), if 1 is entered, all information will be display while running.");
+                System.err.println("write_knn_result (optional): 1 or 0 (default), if 1 is entered, the knn detailed result will be written to output path.");
             }
             MPI.Finalize();
             System.exit(-1);
@@ -269,6 +313,11 @@ class knnJavaMPI_v2{
         if(args.length > 3){
             if(Integer.parseInt(args[3]) > 0){
                 Global.PRINT_INFO = true;
+            }
+        }
+        if(args.length > 4){
+            if(Integer.parseInt(args[4]) > 0){
+                Global.WRITE_RESULT = true;
             }
         }
 
@@ -595,6 +644,8 @@ class knnJavaMPI_v2{
 
 
         /* Each rank has done KNN */
+        long start_time_passing_back = System.currentTimeMillis();
+
         // Now everyone has get the top K for each target node in test group
         // Master receive each rank's top_k info back
         if(rank == Global.MASTER){
@@ -637,6 +688,8 @@ class knnJavaMPI_v2{
             }
         }
 
+        long end_time_passing_back = System.currentTimeMillis();
+
 
         /* Finally */
         // Now Master received top_k info from all salves
@@ -668,11 +721,22 @@ class knnJavaMPI_v2{
             // Stop main timer
             long end_time_all = System.currentTimeMillis();
 
+            // Optional to write KNN result to file
+            if(Global.WRITE_RESULT){
+                if(writeKnnResultToFile(test_group, size, k)){
+                    System.out.println("KNN result details are written to output path.");
+                }
+                else{
+                    System.out.println("Failed writting KNN result details to output path.");
+                }
+            }
+
             // Print all info
             System.out.println("Accuracy: " + acc);
             System.out.println("Elapsed time (Total) = " + (end_time_all - start_time_all));
             System.out.println("Elapsed time (Reading File & Data Passing) = " + (end_time_read_file - start_time_read_file));
-            System.out.println("Elapsed time (Data Passing Back & KNN) = " + (end_time_knn - start_time_knn));
+            System.out.println("Elapsed time (KNN) = " + (end_time_knn - start_time_knn - (end_time_passing_back - start_time_passing_back)));
+            System.out.println("Elapsed time (Data Passing Back) = " + (end_time_passing_back - start_time_passing_back));
         }
 
 

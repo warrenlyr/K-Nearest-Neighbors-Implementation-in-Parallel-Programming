@@ -30,3 +30,4 @@ hdfs/
 
 # data file
 *.csv
+MPI/performance/~$performance.xlsx
