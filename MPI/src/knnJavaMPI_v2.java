@@ -15,6 +15,7 @@
 import mpi.*;
 import java.io.*;
 import java.util.*;
+import java.util.Date;
 import java.lang.Math;
 import java.sql.Timestamp;
 
@@ -39,7 +40,8 @@ class knnJavaMPI_v2{
         public static int MPI_TAG_SEND_TRAIN_GROUP = 202;
         // MPI Tag - Receive - Data
         public static int MPI_TAG_SEND_BACK_TOP_K = 301;
-
+        // MPI Tag - Send - Error
+        public static int MPI_TAG_SEND_FILE_OPEN_ERROR = 401;
     }
 
 
@@ -240,7 +242,8 @@ class knnJavaMPI_v2{
      * Helper function to get current timestamp
      */
     static public String getCurrentTimestamp(){
-        return (new Timestamp(System.currentTimeMillis())).toString();
+        Timestamp ts = new Timestamp(System.currentTimeMillis());
+        return ts.toString().split("\\.")[0];
     }
 
 
@@ -284,6 +287,9 @@ class knnJavaMPI_v2{
         Node[] test_group;
         // 2D array to store top-k neighbors for each target node found locally
         Node[][] top_k_local_arr;
+        // Array to send/receive file open error message to each eank/from Master
+        int[] file_open_error = new int[1];
+        file_open_error[0] = 0;
 
         // The chunk size, to seperate data to slaves
         int chunk_size = 0;
@@ -294,8 +300,9 @@ class knnJavaMPI_v2{
 
 
         // Rank 0 reads file
-        try{
-            if(rank == 0){
+        // Validate if file exist at the same time
+        if(rank == 0){
+            try{
                 // Read test group
                 input_file_test = new File(args[0]);
                 sc_test = new Scanner(input_file_test);
@@ -316,12 +323,45 @@ class knnJavaMPI_v2{
                     System.out.println("[" + getCurrentTimestamp() + "] " + "Rank(" + rank + ") read from file: " + "Total train nodes: " + total_train_nodes);
                 }
             }
+            catch(FileNotFoundException e){
+                // If file open error, send file open error to each rank
+                // So each rank will call MPI_FINALIZE()
+                System.err.println("[" + getCurrentTimestamp() + "] " + "Rank(" + rank + ") Error open input file: " + e);
+                file_open_error[0] = 1;
+            }
         }
-        catch(FileNotFoundException e){
-            System.err.println("Cannot open input file: " + e);
+
+        // Master send file open status message to all slaves
+        if(rank == Global.MASTER){
+            for(int i = 1; i < size; i ++){
+                MPI.COMM_WORLD.Send(
+                    file_open_error,
+                    0,
+                    1,
+                    MPI.INT,
+                    i,
+                    Global.MPI_TAG_SEND_FILE_OPEN_ERROR
+                );
+            }
+        }
+
+        // Every rank check if file open cussessfully
+        // If not, shutdown the program
+        if(rank != Global.MASTER){
+            MPI.COMM_WORLD.Recv(
+                file_open_error,
+                0,
+                1,
+                MPI.INT,
+                Global.MASTER,
+                Global.MPI_TAG_SEND_FILE_OPEN_ERROR
+            );
+        }
+        if(file_open_error[0] > 0){
             MPI.Finalize();
             System.exit(-1);
         }
+
 
         // Mater send size info to slaves
         if(rank == 0){
@@ -441,32 +481,18 @@ class knnJavaMPI_v2{
         if (rank == 0){
             // Continue read test file
             int test_node_count = 0;
-            try{
-                while(sc_test.hasNextLine()){
-                    String[] line = sc_test.nextLine().split(",", -1);
-                    Node node = new Node(Double.parseDouble(line[0]), Double.parseDouble(line[1]), Double.parseDouble(line[2]), line[3]);
-                    test_group[test_node_count ++] = node;
-                }
-            }
-            catch(Exception e){
-                System.err.println("Error while reading test file: " + e);
-                MPI.Finalize();
-                System.exit(-1);
+            while(sc_test.hasNextLine()){
+                String[] line = sc_test.nextLine().split(",", -1);
+                Node node = new Node(Double.parseDouble(line[0]), Double.parseDouble(line[1]), Double.parseDouble(line[2]), line[3]);
+                test_group[test_node_count ++] = node;
             }
 
             // Continue read train file
-            try{
-                int train_node_count = 0;
-                while(sc_train.hasNextLine()){
-                    String[] line = sc_train.nextLine().split(",", -1);
-                    Node node = new Node(Double.parseDouble(line[0]), Double.parseDouble(line[1]), Double.parseDouble(line[2]), line[3]);
-                    train_group[train_node_count ++] = node;
-                }
-            }
-            catch(Exception e){
-                System.err.println("Error while reading train file: " + e);
-                MPI.Finalize();
-                System.exit(-1);
+            int train_node_count = 0;
+            while(sc_train.hasNextLine()){
+                String[] line = sc_train.nextLine().split(",", -1);
+                Node node = new Node(Double.parseDouble(line[0]), Double.parseDouble(line[1]), Double.parseDouble(line[2]), line[3]);
+                train_group[train_node_count ++] = node;
             }
 
             // Distribute data to slaves
@@ -646,7 +672,7 @@ class knnJavaMPI_v2{
             System.out.println("Accuracy: " + acc);
             System.out.println("Elapsed time (Total) = " + (end_time_all - start_time_all));
             System.out.println("Elapsed time (Reading File & Data Passing) = " + (end_time_read_file - start_time_read_file));
-            System.out.println("Elapsed time (KNN & Data Passing Back) = " + (end_time_knn - start_time_knn));
+            System.out.println("Elapsed time (Data Passing Back & KNN) = " + (end_time_knn - start_time_knn));
         }
 
 
