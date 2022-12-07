@@ -202,9 +202,6 @@ class knnJavaMPI_v2{
      * @return none
      */
     public static void getNodeNewClassByTopKNeighbors(Node node, Node[] top_k_neighbor_arr){
-        // for(Node n: top_k_neighbor_arr){
-        //     System.out.println(n);
-        // }
 
         HashMap<String, Integer> count = new HashMap<String, Integer>();
 
@@ -221,10 +218,6 @@ class knnJavaMPI_v2{
 
         TreeMap<String, Integer> sortedCount = new TreeMap<String, Integer>();
         sortedCount.putAll(count);
-        // for(java.util.Map.Entry<String, Integer> pair: sortedCount.entrySet()){
-        //     System.out.print(pair.getKey() + " " + pair.getValue() + ", ");
-        // }
-        // System.out.println();
 
         // Get max-vote. If votes are equal, use alphabet-order
         int max_vote = 0;
@@ -236,7 +229,6 @@ class knnJavaMPI_v2{
             }
         }
 
-        // System.out.println(max_vote + " " + max_vote_class_name);
         node.setNewClassName(max_vote_class_name);
     }
 
@@ -383,13 +375,8 @@ class knnJavaMPI_v2{
         // Master send file open status message to all slaves
         if(rank == Global.MASTER){
             for(int i = 1; i < size; i ++){
-                MPI.COMM_WORLD.Send(
-                    file_open_error,
-                    0,
-                    1,
-                    MPI.INT,
-                    i,
-                    Global.MPI_TAG_SEND_FILE_OPEN_ERROR
+                MPI.COMM_WORLD.Send(file_open_error, 0, 1,
+                    MPI.INT, i, Global.MPI_TAG_SEND_FILE_OPEN_ERROR
                 );
             }
         }
@@ -398,12 +385,8 @@ class knnJavaMPI_v2{
         // If not, shutdown the program
         if(rank != Global.MASTER){
             MPI.COMM_WORLD.Recv(
-                file_open_error,
-                0,
-                1,
-                MPI.INT,
-                Global.MASTER,
-                Global.MPI_TAG_SEND_FILE_OPEN_ERROR
+                file_open_error, 0, 1,
+                MPI.INT, Global.MASTER, Global.MPI_TAG_SEND_FILE_OPEN_ERROR
             );
         }
         if(file_open_error[0] > 0){
@@ -423,33 +406,21 @@ class knnJavaMPI_v2{
             int[] mpi_chunk_size = new int[1];
             mpi_chunk_size[0] = chunk_size;
 
-            // Send train_group size
             for(int i = 1; i < size; i ++){
+                // Send train_group size
                 MPI.COMM_WORLD.Isend(
-                    mpi_total_train_nodes,
-                    0,
-                    1,
-                    MPI.INT,
-                    i,
-                    Global.MPI_TAG_SEND_TRAIN_GROUP_SIZE
+                    mpi_total_train_nodes, 0, 1,
+                    MPI.INT, i, Global.MPI_TAG_SEND_TRAIN_GROUP_SIZE
                 );
                 // Send test_group size
                 MPI.COMM_WORLD.Isend(
-                    mpi_total_test_nodes,
-                    0,
-                    1,
-                    MPI.INT,
-                    i,
-                    Global.MPI_TAG_SEND_TEST_GROUP_SIZE
+                    mpi_total_test_nodes, 0, 1,
+                    MPI.INT, i, Global.MPI_TAG_SEND_TEST_GROUP_SIZE
                 );
                 // Send chunk size
                 MPI.COMM_WORLD.Isend(
-                    mpi_chunk_size,
-                    0,
-                    1,
-                    MPI.INT,
-                    i,
-                    Global.MPI_TAG_SEND_CHUNK_SIZE
+                    mpi_chunk_size, 0, 1,
+                    MPI.INT, i, Global.MPI_TAG_SEND_CHUNK_SIZE
                 );
 
                 if(Global.PRINT_INFO){
@@ -466,30 +437,18 @@ class knnJavaMPI_v2{
 
             // Receive train_group size
             MPI.COMM_WORLD.Recv(
-                mpi_total_train_nodes,
-                0,
-                1,
-                MPI.INT,
-                0,
-                Global.MPI_TAG_SEND_TRAIN_GROUP_SIZE
+                mpi_total_train_nodes, 0, 1,
+                MPI.INT, 0, Global.MPI_TAG_SEND_TRAIN_GROUP_SIZE
             );
             // Receive test_group size
             MPI.COMM_WORLD.Recv(
-                mpi_total_test_nodes,
-                0,
-                1,
-                MPI.INT,
-                0,
-                Global.MPI_TAG_SEND_TEST_GROUP_SIZE
+                mpi_total_test_nodes, 0, 1,
+                MPI.INT, 0, Global.MPI_TAG_SEND_TEST_GROUP_SIZE
             );
             // Receive chunk size
             MPI.COMM_WORLD.Recv(
-                mpi_chunk_size,
-                0,
-                1,
-                MPI.INT,
-                0,
-                Global.MPI_TAG_SEND_CHUNK_SIZE
+                mpi_chunk_size, 0, 1,
+                MPI.INT, 0, Global.MPI_TAG_SEND_CHUNK_SIZE
             );
 
             // Store the index-0 value of each array to where they should be :(
@@ -548,22 +507,14 @@ class knnJavaMPI_v2{
             for(int i = 1; i < size; i ++){
                 // Send test nodes to all slaves
                 MPI.COMM_WORLD.Isend(
-                    test_group,
-                    0,
-                    total_test_nodes,
-                    MPI.OBJECT,
-                    i,
-                    Global.MPI_TAG_SEND_TEST_GROUP
+                    test_group, 0, total_test_nodes,
+                    MPI.OBJECT, i, Global.MPI_TAG_SEND_TEST_GROUP
                 );
 
                 // Send portion of train nodes to all slaves
                 MPI.COMM_WORLD.Isend(
-                    train_group,
-                    chunk_size * (i - 1),
-                    chunk_size,
-                    MPI.OBJECT,
-                    i,
-                    Global.MPI_TAG_SEND_TRAIN_GROUP
+                    train_group, chunk_size * (i - 1), chunk_size,
+                    MPI.OBJECT, i, Global.MPI_TAG_SEND_TRAIN_GROUP
                 );
 
                 if(Global.PRINT_INFO){
@@ -575,21 +526,13 @@ class knnJavaMPI_v2{
         else{
             // Receive test_group
             MPI.COMM_WORLD.Recv(
-                test_group,
-                0,
-                total_test_nodes,
-                MPI.OBJECT,
-                0,
-                Global.MPI_TAG_SEND_TEST_GROUP
+                test_group, 0, total_test_nodes,
+                MPI.OBJECT, 0, Global.MPI_TAG_SEND_TEST_GROUP
             );
             // Receive portion of train_nodes
             MPI.COMM_WORLD.Recv(
-                train_group,
-                chunk_size * (rank - 1),
-                chunk_size,
-                MPI.OBJECT,
-                0,
-                Global.MPI_TAG_SEND_TRAIN_GROUP
+                train_group, chunk_size * (rank - 1), chunk_size,
+                MPI.OBJECT, 0, Global.MPI_TAG_SEND_TRAIN_GROUP
             );
 
             if(Global.PRINT_INFO){
@@ -652,12 +595,8 @@ class knnJavaMPI_v2{
             for(int i = 1; i < size; i ++){
                 Node[][] temp = new Node[total_test_nodes][k];
                 MPI.COMM_WORLD.Recv(
-                    temp,
-                    0,
-                    total_test_nodes,
-                    MPI.OBJECT,
-                    i,
-                    Global.MPI_TAG_SEND_BACK_TOP_K
+                    temp, 0, total_test_nodes,
+                    MPI.OBJECT, i, Global.MPI_TAG_SEND_BACK_TOP_K
                 );
 
                 // Store received data
@@ -675,12 +614,8 @@ class knnJavaMPI_v2{
         // Slaves send local top_k info to Master
         else{
             MPI.COMM_WORLD.Send(
-                top_k_local_arr,
-                0,
-                total_test_nodes,
-                MPI.OBJECT,
-                Global.MASTER,
-                Global.MPI_TAG_SEND_BACK_TOP_K
+                top_k_local_arr, 0, total_test_nodes,
+                MPI.OBJECT, Global.MASTER, Global.MPI_TAG_SEND_BACK_TOP_K
             );
 
             if(Global.PRINT_INFO){
