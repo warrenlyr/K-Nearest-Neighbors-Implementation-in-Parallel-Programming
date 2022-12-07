@@ -32,7 +32,7 @@ public class KNearestNeighbors {
 					for (int i = 0; i < testNodeNum; i++) {
 						String testNode = conf.get("testNode" + i);
 						String[] testdata = testNode.split(",");
-						double dist = Math.pow(x - Double.valueOf(testdata[0]), 2) + Math.pow(y - Double.valueOf(testdata[1]), 2) + Math.pow(z - Double.valueOf(testdata[2]), 2);
+						double dist = Math.sqrt(Math.pow(x - Double.valueOf(testdata[0]), 2) + Math.pow(y - Double.valueOf(testdata[1]), 2) + Math.pow(z - Double.valueOf(testdata[2]), 2));
 						distance.set(dist);
 						String post = i + ":" + line;
 						posting.set(post);
@@ -49,7 +49,7 @@ public class KNearestNeighbors {
 		private List<List<String>> lists;
 		private Text posting = new Text();
 		private DoubleWritable testNodename = new DoubleWritable();
-
+		private int count = 0;
 		public void configure(JobConf job) {
 			this.conf = job;
 			int testNodeNum = Integer.parseInt(conf.get("testNodeNum"));
@@ -95,7 +95,7 @@ public class KNearestNeighbors {
 							for (HashMap.Entry<String, Integer> entry : table.entrySet()) {
 								String className = entry.getKey();
 								Integer count = entry.getValue();
-								if (count > max) {
+								if (count > max || (count == max && className.compareTo(resultClass) < 0)) {
 									resultClass = className;
 									max = count;
 								}
@@ -113,7 +113,7 @@ public class KNearestNeighbors {
     
     public static void main(String[] args) throws Exception {
 		// input format:
-		//  hadoop jar knearestneighbors.jar KNearestNeighbors input output k testNodePath
+		//  hadoop jar KNearestNeighbors.jar KNearestNeighbors input output k testNodePath
 		JobConf conf = new JobConf(KNearestNeighbors.class);
 		conf.setJobName("knearestneighbors");
 		
