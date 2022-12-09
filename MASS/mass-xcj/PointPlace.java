@@ -4,11 +4,8 @@ import edu.uw.bothell.css.dsl.MASS.Place;
 import java.util.ArrayList;
 
 public class PointPlace extends Place {
-    public double x;
-    public double y;
-	public double z;
-	public int classNum;
-	public double distance;
+	public ArrayList<Point> points;
+	public ArrayList<Double> distances;
 
 	public final static int init = 0;
 	public final static int dist = 1;
@@ -44,24 +41,23 @@ public class PointPlace extends Place {
 	 * @param args formally declared but actually not used
 	 */
 	public Object init(Object arg) {
-		Point temp = (Point)arg;
-		x = temp.x;
-		y = temp.y;
-		z = temp.z;
-		classNum = temp.classNum;
-		distance = 0;
+		points = (ArrayList<Point>)(arg);
 		return null;
 	}
 	
 
 	public Object dist(Object arg) {
-		Point temp = (Point)arg;
-		distance = temp.dist(x, y, z);
+		distances = new ArrayList<>();
+		Point target = (Point)arg;
+		for (Point point : points) {
+			distances.add(target.dist(point));
+		}
 		return null;
 	}
 	
-	public Double collect(Object arg) {
-		return distance;
+	public ArrayList<Double> collect(Object arg) {
+		return distances;
 	}
+
 }
 
