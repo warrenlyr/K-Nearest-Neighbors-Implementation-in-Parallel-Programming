@@ -135,7 +135,7 @@ public class KnnMASS{
         }
 
         public Object init(Object args){
-            this.node = (Node) args;
+            this.node = (ArrayList<Node>) args;
             return null;
         }
 
@@ -205,7 +205,8 @@ public class KnnMASS{
         MASS.init();
 
         Places knn_place = new Places(1, TrainGroup.class.getName(), null, train_size, 1);
-        knn_place.callAll(TrainGroup.init_, group.get(1).toArray());
+        Object[] train_group = group.get(1).toArray();
+        knn_place.callAll(TrainGroup.init_, train_group);
 
         // For each target node
         for(int i = 0; i < test_size; i ++){
