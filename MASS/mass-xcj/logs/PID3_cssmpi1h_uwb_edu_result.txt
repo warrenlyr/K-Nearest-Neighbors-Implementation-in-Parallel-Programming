@@ -1,0 +1,45 @@
+20:48:28.734 [main] [ERROR] MProcess.receiveMessage: detected 
+java.io.EOFException: null
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:3193) ~[?:?]
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1621) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:488) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:446) ~[?:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.receiveMessage(MProcess.java:297) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.start(MProcess.java:363) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.main(MProcess.java:236) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+20:55:36.841 [main] [ERROR] MProcess.receiveMessage: detected 
+java.io.EOFException: null
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:3193) ~[?:?]
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1621) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:488) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:446) ~[?:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.receiveMessage(MProcess.java:297) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.start(MProcess.java:363) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.main(MProcess.java:236) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+20:59:15.858 [main] [ERROR] MProcess.receiveMessage: detected 
+java.io.EOFException: null
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:3193) ~[?:?]
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1621) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:488) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:446) ~[?:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.receiveMessage(MProcess.java:297) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.start(MProcess.java:363) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.main(MProcess.java:236) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+21:05:08.250 [main] [ERROR] MProcess.receiveMessage: detected 
+java.io.EOFException: null
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:3193) ~[?:?]
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1621) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:488) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:446) ~[?:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.receiveMessage(MProcess.java:297) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.start(MProcess.java:363) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.main(MProcess.java:236) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+21:05:53.900 [main] [ERROR] MProcess.receiveMessage: detected 
+java.io.EOFException: null
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:3193) ~[?:?]
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1621) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:488) ~[?:?]
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:446) ~[?:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.receiveMessage(MProcess.java:297) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.start(MProcess.java:363) [mass-knn-1.0.0-SNAPSHOT.jar:?]
+	at edu.uw.bothell.css.dsl.MASS.MProcess.main(MProcess.java:236) [mass-knn-1.0.0-SNAPSHOT.jar:?]

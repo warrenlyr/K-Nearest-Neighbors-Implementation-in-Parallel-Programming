@@ -59,7 +59,7 @@ public class MassKNN {
 		}
 
 		// Divide train points to ranks
-		int n_places = 32;
+		int n_places = 4;
 		int bound = train_arr.size() / n_places;
 		int rest = train_arr.size() % n_places;
 		ArrayList<ArrayList<Point>> placeInputArr = new ArrayList<>();
@@ -105,6 +105,7 @@ public class MassKNN {
 				ArrayList<Double> temp = (ArrayList<Double>) allDistances[i];
 				int placeSize = temp.size();
 				h += placeSize;
+				// System.out.println("train size / placeSize:  " + train_arr.size() + " " + h);
 				for (int j = 0; j < placeSize; j++) {
 					distances.add(new ClassDist(train_arr.get(m).classNum, temp.get(j)));
 					m++;
