@@ -10,7 +10,6 @@
  * KNN Graph in parallel programming.
  * Part 4: Parallel in MASS.
 */
-
 import java.io.*;
 import java.util.*;
 import java.nio.file.*;
@@ -27,7 +26,6 @@ public class KnnMASS{
     //
     private static final String NODE_FILE = "nodes.xml";
 
-
     public static class Node implements Serializable, Comparable<Node>{
         // Coordinates
         double x;
@@ -38,7 +36,7 @@ public class KnnMASS{
         String newClassName;
         // This node's distance to target node
         double distance_to_target;
-
+    
         public Node(){
             x = 0.0;
             y = 0.0;
@@ -46,7 +44,7 @@ public class KnnMASS{
             className = "";
             distance_to_target = 0.0;
         }
-
+    
         public Node(double x, double y, double z, String className){
             this.x = x;
             this.y = y;
@@ -55,7 +53,7 @@ public class KnnMASS{
             this.newClassName = "";
             this.distance_to_target = 0.0;
         }
-
+    
         public Node(double x, double y, double z, String className, double distance_to_target){
             this.x = x;
             this.y = y;
@@ -64,40 +62,48 @@ public class KnnMASS{
             this.newClassName = "";
             this.distance_to_target = distance_to_target;
         }
-
-
+    
+    
         // Get current node's distance to target node
         public double getDistance(){
             return this.distance_to_target;
         }
-
-
+    
+    
         // Get current node class name
         public String getClassName(){
             return this.className;
         }
-
-
+    
+    
         // Helper function for debug
         public String getResultForValidation(){
             return (this.x + "," + this.y + "," + this.x + "," + this.newClassName);
         }
-
-
+    
+    
         // Set current node's new class name
         public void setNewClassName(String newClassName){
             this.newClassName = newClassName;
         }
-
-
+    
+    
+        public Double distance(Node another){
+            double x = this.x - another.x;
+            double y = this.y - another.y;
+            double z = this.z - another.z;
+            return Math.sqrt(x*x + y*y + z*z);
+        }
+    
+    
         // Helper function for printing node details
         @Override
         public String toString(){
             return ("Node [x=" + this.x + ", y=" + this.y + ", z=" + this.z + 
             ", class=" + this.className + ", newClass=" + this.newClassName + ", distance=" + this.distance_to_target + "]");
         }
-
-
+    
+    
         // Customized compare, for treeMap use
         @Override
         public int compareTo(Node node){
@@ -106,42 +112,130 @@ public class KnnMASS{
     }
 
 
-    public static double distance(Node a, Node b){
-        double x = a.x - b.x;
-        double y = a.y - b.y;
-        double z = a.z - b.z;
-        return Math.sqrt(x*x + y*y + z*z);
+    /*
+     * Helper function to sort Node array by nodes' distance_to_target.
+     */
+    public static class SortByNodeDistance implements Comparator<Node> {
+        public int compare(Node a, Node b){
+            return a.distance_to_target < b.distance_to_target ? -1 : 1;
+        }
     }
 
 
-    public class TrainGroup extends Place{
+    /*
+     * Class to get a target node's new class name from the give
+     * top_k_neighbor array. The size of this array should be k.
+     * All neighbors in this array do the majority vote.
+     * The most common class among the neighbors becomes the new
+     * class name for the target node.
+     * If two classes' votes are the same, we go by the alphabet order.
+     * Example:
+     * In our case, our labels are [clear, clouds, rain].
+     * So if clear gets 4 votes and clouds gets 4 votes,
+     * the new class name will be clear.
+     * 
+     * @param Node node: the target node.
+     * @param Node[] top_k_neighbor_arr: the target node's top k neighbors.
+     * 
+     * @return none
+     */
+    public static void getNodeNewClassByTopKNeighbors(Node node, Node[] top_k_neighbor_arr){
+
+        HashMap<String, Integer> count = new HashMap<String, Integer>();
+
+        for(int i = 0; i < top_k_neighbor_arr.length; i ++){
+            String classname = top_k_neighbor_arr[i].getClassName();
+
+            if(count.containsKey(classname)){
+                count.put(classname, count.get(classname) + 1);
+            }
+            else{
+                count.put(classname, 1);
+            }
+        }
+
+        TreeMap<String, Integer> sortedCount = new TreeMap<String, Integer>();
+        sortedCount.putAll(count);
+
+        // Get max-vote. If votes are equal, use alphabet-order
+        int max_vote = 0;
+        String max_vote_class_name = "";
+        for(java.util.Map.Entry<String, Integer> pair: sortedCount.entrySet()){
+            if(pair.getValue() > max_vote){
+                max_vote = pair.getValue();
+                max_vote_class_name = pair.getKey();
+            }
+        }
+
+        node.setNewClassName(max_vote_class_name);
+    }
+
+
+    /*
+     * Class to evaluate the result generated by KNN.
+     * For each node in the target(test) group, if its new class name
+     * is equal to its original class name, we say the prediction
+     * is correct. Otherwise, the prediction is wrong.
+     * The correctness is calculated by: 
+     * correct# / (correct# + wrong#)
+     * 
+     * @param Node[] nodeArr: A 1D node array, contains the all target(test) nodes.
+     * 
+     * @return double correctness.
+     */
+    public static double evaluateKnnCorrectness(Node[] nodeArr){
+        double correct_count = 0.0;
+        double wrong_count = 0.0;
+
+        for(int i = 0; i < nodeArr.length; i ++){
+            // System.out.println(nodeArr[i].newClassName + " " + nodeArr[i].className);
+
+            if(nodeArr[i].newClassName.equals(nodeArr[i].className)){
+                correct_count += 1.0;
+            }
+            else{
+                wrong_count += 1.0;
+            }
+        }
+
+        return (correct_count / (correct_count + wrong_count));
+    }
+
+
+    public static class TrainGroup extends Place{
         public static final int init_ = 0;
         public static final int computeDistance_ = 1;
-        // public static final int exchangeDistance_ = 2;
+        public static final int collectNode_ = 2;
         public static final int collectDistance_ = 3;
 
         private Node node;
 
-        public TrainGroup() {}
+        public TrainGroup(Object args) {}
 
         public Object callMethod(int funcId, Object args){
             switch(funcId){
                 case init_: return init(args);
                 case computeDistance_: return computeDistance(args);
-                // case exchangeDistance_: return exchangeDistance(arge);
+                case collectNode_: return collectNode(args);
                 case collectDistance_: return collectDistance(args);
             }
             return null;
         }
 
         public Object init(Object args){
-            this.node = (ArrayList<Node>) args;
+            // System.out.println("here?1");
+            this.node = (Node) args;
+            // System.out.println("here?2");
             return null;
         }
 
         public Object computeDistance(Object args){
-            this.node.distance_to_target = distance((Node) args, this.node);
+            this.node.distance_to_target = this.node.distance((Node) args);
             return null;
+        }
+
+        public Node collectNode(Object args){
+            return this.node;
         }
 
         public Double collectDistance(Object args){
@@ -202,9 +296,18 @@ public class KnnMASS{
             System.err.println("Error open input file: " + e);
         }
 
+        MASS.setNodeFilePath(NODE_FILE);
+		MASS.setLoggingLevel(LogLevel.ERROR);
         MASS.init();
 
-        Places knn_place = new Places(1, TrainGroup.class.getName(), null, train_size, 1);
+        long start_time_all = System.currentTimeMillis();
+
+        ArrayList<ArrayList<Node>> res = new ArrayList<ArrayList<Node>>();
+        for(int i = 0; i < test_size; i ++){
+            res.add(new ArrayList<Node>());
+        }
+
+        Places knn_place = new Places(1, TrainGroup.class.getName(), null, train_size);
         Object[] train_group = group.get(1).toArray();
         knn_place.callAll(TrainGroup.init_, train_group);
 
@@ -213,11 +316,37 @@ public class KnnMASS{
             // Calculate each train node (in the matrix) distance to this target node
             knn_place.callAll(TrainGroup.computeDistance_, group.get(0).get(i));
             // Collect calculated distance from the matrix
-            Object[] temp = knn_place.callAll(TrainGroup.collectDistance_, group.get(1).toArray());
+            Object[] temp = knn_place.callAll(TrainGroup.collectNode_, group.get(1).toArray());
+            // for(Object x: temp){
+            //     System.out.println((Double) x);
+            // }
+            ArrayList<Node> res_local = new ArrayList<Node>();
             for(Object x: temp){
-                System.out.println((Double) x);
+                res_local.add((Node) x);
+            }
+            Collections.sort(res_local,  Comparator.comparing(Node::getDistance));
+            for(int j = 0; j < k; j ++){
+                res.get(i).add(res_local.get(j));
             }
         }
+
+        // for(int i = 0; i < test_size; i ++){
+        //     for(int j = 0; j < k; j ++){
+        //         System.out.print(res.get(i).get(j));
+        //     }
+        //     System.out.println();
+        // }
+
+        for(int i = 0; i < test_size; i ++){
+            getNodeNewClassByTopKNeighbors(group.get(0).get(i), res.get(i).toArray(new Node[res.get(i).size()]));
+        }
+
+        // Calculate the correctness
+        double acc = evaluateKnnCorrectness(group.get(0).toArray(new Node[group.get(0).size()]));
+
+        long end_time_all = System.currentTimeMillis();
+        System.out.println("Accuracy: " + acc);
+        System.out.println("Elapsed time (Total) = " + (end_time_all - start_time_all));
 
         MASS.finish();
     }
