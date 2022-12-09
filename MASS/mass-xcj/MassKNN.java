@@ -46,8 +46,6 @@ public class MassKNN {
 					Double.parseDouble(words[2]), classNum));
 		}
 
-		Object train[] = train_arr.toArray();
-
 		// Read test points
 		input = new Scanner(new File("test.csv"));
 		int numTest = input.nextInt();
@@ -60,6 +58,25 @@ public class MassKNN {
 			groundTruth.put(words[0] + " " + words[1] + " " + words[2], words[3]);
 		}
 
+		// Divide train points to ranks
+		int n_places = 32;
+		int bound = train_arr.size() / n_places;
+		int rest = train_arr.size() % n_places;
+		ArrayList<ArrayList<Point>> placeInputArr = new ArrayList<>();
+		for (int i = 0; i < n_places; i++) {
+			placeInputArr.add(new ArrayList<Point>());
+			if (i < rest) {
+				for (int j = 0; j < bound + 1; j++) {
+					placeInputArr.get(i).add(new Point(train_arr.get(i * (bound + 1) + j)));
+				}
+			} else {
+				for (int j = 0; j < bound; j++) {
+					placeInputArr.get(i).add(new Point(train_arr.get(i * bound + rest + j)));
+				}
+			}
+		}
+		Object train[] = placeInputArr.toArray();
+
 		// remember starting time
 		long startTime = new Date().getTime();
 		
@@ -70,7 +87,7 @@ public class MassKNN {
 		MASS.init();
 		
 		// Create all places
-		Places places = new Places(1, PointPlace.class.getName(), null, train_arr.size());
+		Places places = new Places(1, PointPlace.class.getName(), null, n_places);
 		places.callAll(PointPlace.init, train);
 		
 		for (Point target : targets) {
@@ -81,8 +98,17 @@ public class MassKNN {
 			Object allDistances[]=places.callAll(PointPlace.collect, (Object[])null);
 			
 			ArrayList<ClassDist> distances = new ArrayList<>();
-			for (int i = 0; i < train.length; i++) {
-				distances.add(new ClassDist(train_arr.get(i).classNum, (Double)allDistances[i]));
+
+			int m = 0;
+			int h = 0;
+			for (int i = 0; i < allDistances.length; i++) {
+				ArrayList<Double> temp = (ArrayList<Double>) allDistances[i];
+				int placeSize = temp.size();
+				h += placeSize;
+				for (int j = 0; j < placeSize; j++) {
+					distances.add(new ClassDist(train_arr.get(m).classNum, temp.get(j)));
+					m++;
+				}
 			}
 
 			distances.sort(new DistComp());
