@@ -102,7 +102,7 @@ class knnJavaMPI_v2{
 
         // Helper function for debug
         public String getResultForValidation(){
-            return (this.x + "," + this.y + "," + this.x + "," + this.newClassName);
+            return (this.x + "," + this.y + "," + this.z + "," + this.newClassName);
         }
 
 

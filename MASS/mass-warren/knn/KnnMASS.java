@@ -25,6 +25,7 @@ import edu.uw.bothell.css.dsl.MASS.logging.LogLevel;
 public class KnnMASS{
     //
     private static final String NODE_FILE = "nodes.xml";
+    private static final String OUTPUT_PATH = "./";
 
     public static class Node implements Serializable, Comparable<Node>{
         // Coordinates
@@ -78,7 +79,7 @@ public class KnnMASS{
     
         // Helper function for debug
         public String getResultForValidation(){
-            return (this.x + "," + this.y + "," + this.x + "," + this.newClassName);
+            return (this.x + "," + this.y + "," + this.z + "," + this.newClassName);
         }
     
     
@@ -88,19 +89,16 @@ public class KnnMASS{
         }
     
     
-        public Double distance(Node another){
-            double x = this.x - another.x;
-            double y = this.y - another.y;
-            double z = this.z - another.z;
-            return Math.sqrt(x*x + y*y + z*z);
-        }
-    
-    
         // Helper function for printing node details
         @Override
         public String toString(){
             return ("Node [x=" + this.x + ", y=" + this.y + ", z=" + this.z + 
             ", class=" + this.className + ", newClass=" + this.newClassName + ", distance=" + this.distance_to_target + "]");
+        }
+
+        public String print(){
+            return ("Node [x=" + this.x + ", y=" + this.y + ", z=" + this.z + 
+            ", class=" + this.className + ", distance=" + this.distance_to_target + "]");
         }
     
     
@@ -109,6 +107,21 @@ public class KnnMASS{
         public int compareTo(Node node){
             return (int) (this.distance_to_target - node.getDistance());
         }
+    }
+
+
+    /* Function to calculate the Euclidean Distance between two nodes.
+     * 
+     * @param Node a: the first node.
+     * @param Node b: the second node.
+     * 
+     * @Return double distance: the Euclidean Distance between two nodes.
+     */
+    public static double distance(Node a, Node b){
+        double x = a.x - b.x;
+        double y = a.y - b.y;
+        double z = a.z - b.z;
+        return Math.sqrt(x*x + y*y + z*z);
     }
 
 
@@ -202,6 +215,79 @@ public class KnnMASS{
     }
 
 
+    /*
+     * Helper function to write knn result to file
+     * 
+     * @param: Node[] node_arr: the array contains all target nodes.
+     * @param int size: the size of rank.
+     * @param int k: the k for knn.
+     * 
+     * @return bool: true if successfully write, false otherwise.
+     */
+    static public boolean writeKnnResultToFile(Node[] node_arr, int k){
+        try{
+            // Create output path if not exist
+            File output_path = new File(OUTPUT_PATH);
+            output_path.mkdir();
+
+            // Create otuput file if not exist, over if exist
+            String file_output_path = OUTPUT_PATH +"Result_k_" + k + ".txt";
+            File output_file = new File(file_output_path);
+            if(! output_file.exists()){
+                output_file.createNewFile();
+            }
+
+            FileWriter fw = new FileWriter(output_file.getPath());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for(Node target: node_arr){
+                bw.write(target.getResultForValidation());
+                bw.write("\n");
+            }
+
+            bw.close();
+            return true;
+        }
+        catch(IOException e){
+            return false;
+        }
+    }
+
+    static public boolean writeKnnResultDetailsToFile(ArrayList<Node> target_group, ArrayList<ArrayList<Node>> neighbor_group, int size, int k){
+        try{
+            // Create output path if not exist
+            File output_path = new File(OUTPUT_PATH);
+            output_path.mkdir();
+
+            // Create otuput file if not exist, over if exist
+            String file_output_path = OUTPUT_PATH +"Result_details_k_" + k + ".txt";
+            File output_file = new File(file_output_path);
+            if(! output_file.exists()){
+                output_file.createNewFile();
+            }
+
+            FileWriter fw = new FileWriter(output_file.getPath());
+            BufferedWriter bw = new BufferedWriter(fw);
+
+            for(int i = 0; i < size; i ++){
+                bw.write(target_group.get(i).getResultForValidation());
+                bw.write(" --- \n");
+                for(int j = 0; j < k; j ++){
+                    bw.write(neighbor_group.get(i).get(j).print());
+                    bw.write("\n");
+                }
+                bw.write("\n");
+            }
+
+            bw.close();
+            return true;
+        }
+        catch(IOException e){
+            return false;
+        }
+    }
+
+
     public static class TrainGroup extends Place{
         public static final int init_ = 0;
         public static final int computeDistance_ = 1;
@@ -230,12 +316,12 @@ public class KnnMASS{
         }
 
         public Object computeDistance(Object args){
-            this.node.distance_to_target = this.node.distance((Node) args);
+            this.node.distance_to_target = distance(this.node, (Node) args);
             return null;
         }
 
         public Node collectNode(Object args){
-            return this.node;
+            return new Node(this.node.x, this.node.y, this.node.z, this.node.className, this.node.distance_to_target);
         }
 
         public Double collectDistance(Object args){
@@ -313,6 +399,7 @@ public class KnnMASS{
 
         // For each target node
         for(int i = 0; i < test_size; i ++){
+            System.out.println(group.get(0).get(i));
             // Calculate each train node (in the matrix) distance to this target node
             knn_place.callAll(TrainGroup.computeDistance_, group.get(0).get(i));
             // Collect calculated distance from the matrix
@@ -340,6 +427,14 @@ public class KnnMASS{
         for(int i = 0; i < test_size; i ++){
             getNodeNewClassByTopKNeighbors(group.get(0).get(i), res.get(i).toArray(new Node[res.get(i).size()]));
         }
+
+        System.out.println();
+        for(Node n: group.get(0)){
+            System.out.println(n);
+        }
+
+        // writeKnnResultToFile(group.get(0).toArray(new Node[group.get(0).size()]), k);
+        writeKnnResultDetailsToFile(group.get(0), res, test_size, k);
 
         // Calculate the correctness
         double acc = evaluateKnnCorrectness(group.get(0).toArray(new Node[group.get(0).size()]));
