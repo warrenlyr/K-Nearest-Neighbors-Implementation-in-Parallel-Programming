@@ -353,13 +353,11 @@ public class KnnMASS{
     public static void main(String[] args) throws IOException{
         // Validate args
         if(args.length < 3){
-            System.err.println("""
-                Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k>
-                 <optional: write_final_result_to_file> <optional: write_result_details_to_file>""");
-            System.err.println("""
-                top_K: int, the k of knn\n
-                write_final_result_to_file: int, 1 or 0 (default)\n
-                write_result_details_to_file: int, 1 or 0 (default)""");
+            System.err.println("Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k>" +
+                "<optional: write_final_result_to_file> <optional: write_result_details_to_file>");
+            System.err.println("top_K: int, the k of knn\n" +
+                "write_final_result_to_file: int, 1 or 0 (default)\n" +
+                "write_result_details_to_file: int, 1 or 0 (default)");
             System.exit(-1);
         }
 
@@ -390,7 +388,7 @@ public class KnnMASS{
             group.add(new ArrayList<Node>());
         }
         
-        
+
         // Read input files
         try{
             File test_file = new File(test_file_name);
