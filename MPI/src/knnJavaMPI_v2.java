@@ -33,7 +33,7 @@ class knnJavaMPI_v2{
         public static final String OUTPUT_PATH = "./output/";
         public static boolean WRITE_RESULT = false;
 
-        // MPI Tag - Send - Sizes
+        // MPI Tag - Send - Size
         public static final int MPI_TAG_SEND_TEST_GROUP_SIZE = 101;
         public static final int MPI_TAG_SEND_TRAIN_GROUP_SIZE = 102;
         public static final int MPI_TAG_SEND_CHUNK_SIZE = 103;
@@ -102,7 +102,7 @@ class knnJavaMPI_v2{
 
         // Helper function for debug
         public String getResultForValidation(){
-            return (this.x + "," + this.y + "," + this.x + "," + this.newClassName);
+            return (this.x + "," + this.y + "," + this.z + "," + this.newClassName);
         }
 
 
