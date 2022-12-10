@@ -11,6 +11,7 @@
  * Part 4: Parallel in MASS.
  * Version v1: Places computation only.
 */
+
 import java.io.*;
 import java.util.*;
 import java.nio.file.*;
@@ -26,7 +27,10 @@ import edu.uw.bothell.css.dsl.MASS.logging.LogLevel;
 public class KnnMASS{
     //
     private static final String NODE_FILE = "nodes.xml";
-    private static final String OUTPUT_PATH = "./";
+    private static final String OUTPUT_PATH = "./output/";
+    private static int WRITE_RESULT_TO_FILE = 0;
+    private static int WRITE_RESULT_DETAILS_TO_FILE = 0;
+
 
     public static class Node implements Serializable, Comparable<Node>{
         // Coordinates
@@ -65,30 +69,25 @@ public class KnnMASS{
             this.distance_to_target = distance_to_target;
         }
     
-    
         // Get current node's distance to target node
         public double getDistance(){
             return this.distance_to_target;
         }
-    
     
         // Get current node class name
         public String getClassName(){
             return this.className;
         }
     
-    
         // Helper function for debug
         public String getResultForValidation(){
             return (this.x + "," + this.y + "," + this.z + "," + this.newClassName);
         }
     
-    
         // Set current node's new class name
         public void setNewClassName(String newClassName){
             this.newClassName = newClassName;
         }
-    
     
         // Helper function for printing node details
         @Override
@@ -101,7 +100,6 @@ public class KnnMASS{
             return ("Node [x=" + this.x + ", y=" + this.y + ", z=" + this.z + 
             ", class=" + this.className + ", distance=" + this.distance_to_target + "]");
         }
-    
     
         // Customized compare, for treeMap use
         @Override
@@ -168,6 +166,7 @@ public class KnnMASS{
             }
         }
 
+        // To ensure the alphabet-order if votes are equal on the same class
         TreeMap<String, Integer> sortedCount = new TreeMap<String, Integer>();
         sortedCount.putAll(count);
 
@@ -217,7 +216,8 @@ public class KnnMASS{
 
 
     /*
-     * Helper function to write knn result to file
+     * Helper function to write knn result to file.
+     * The result including the target nodes details after knn.
      * 
      * @param: Node[] node_arr: the array contains all target nodes.
      * @param int size: the size of rank.
@@ -254,6 +254,18 @@ public class KnnMASS{
         }
     }
 
+    /*
+     * Helper function to write result details to file.
+     * The details including the target node, and it's top K neighbor nodes details.
+     * 
+     * @param ArrayList<Node> target_group: the array containing all target nodes.
+     * @param ArrayList<ArrayList<Node>> neighbor_group: the 2D array containing all target nodes'
+     *  top k neighbor nodes.
+     * @param int size: the size of target_group (the number of target nodes).
+     * @param int k: k of knn.
+     * 
+     * @return bool: true if successfully write, false otherwise.
+     */
     static public boolean writeKnnResultDetailsToFile(ArrayList<Node> target_group, ArrayList<ArrayList<Node>> neighbor_group, int size, int k){
         try{
             // Create output path if not exist
@@ -289,12 +301,17 @@ public class KnnMASS{
     }
 
 
+    /*
+     * Class to override Place class of MASS.
+     */
     public static class TrainGroup extends Place{
+        // Customized callAll() function ID
         public static final int init_ = 0;
         public static final int computeDistance_ = 1;
         public static final int collectNode_ = 2;
         public static final int collectDistance_ = 3;
 
+        // The node to store in each element in the Places matrix
         private Node node;
 
         public TrainGroup(Object args) {}
@@ -309,53 +326,72 @@ public class KnnMASS{
             return null;
         }
 
+        // Init function, to assign a train node in train group to an index of Places matrix
         public Object init(Object args){
-            // System.out.println("here?1");
             this.node = (Node) args;
-            // System.out.println("here?2");
             return null;
         }
 
+        // Function to update the distance of the train node store in this index to the given target node
         public Object computeDistance(Object args){
             this.node.distance_to_target = distance(this.node, (Node) args);
             return null;
         }
 
+        // Function to collect all Nodes in the Places matrix
         public Node collectNode(Object args){
             return new Node(this.node.x, this.node.y, this.node.z, this.node.className, this.node.distance_to_target);
         }
 
+        // Function to collect all Nodes' distance attribute in the Places matrix (not used)
         public Double collectDistance(Object args){
             return this.node.distance_to_target;
         }
     }
 
-    
+
     public static void main(String[] args) throws IOException{
+        // Validate args
         if(args.length < 3){
-            System.err.println("Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k>");
+            System.err.println("""
+                Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k>
+                 <optional: write_final_result_to_file> <optional: write_result_details_to_file>""");
+            System.err.println("""
+                top_K: int, the k of knn\n
+                write_final_result_to_file: int, 1 or 0 (default)\n
+                write_result_details_to_file: int, 1 or 0 (default)""");
             System.exit(-1);
         }
+
+        /* Init */
+        String train_file_name = "";
+        String test_file_name = "";
 
         int k = 0;
         int train_size = 0;
         int test_size = 0;
 
+        test_file_name = args[0];
+        train_file_name = args[1];
+        k = Integer.parseInt(args[2]);
+
+        if(args.length > 3){
+            WRITE_RESULT_TO_FILE = Integer.parseInt(args[3]);
+        }
+        if(args.length > 4){
+            WRITE_RESULT_DETAILS_TO_FILE = Integer.parseInt(args[4]);
+        }
+
+        // Init array to store all test nodes and train nodes
         // index-0: test group
         // index-1: train group
         ArrayList<ArrayList<Node>> group = new ArrayList<ArrayList<Node>>();
         for(int i = 0; i < 2; i ++){
             group.add(new ArrayList<Node>());
         }
-
-
-        String train_file_name = "";
-        String test_file_name = "";
-
-        test_file_name = args[0];
-        train_file_name = args[1];
-        k = Integer.parseInt(args[2]);
-
+        
+        
+        // Read input files
         try{
             File test_file = new File(test_file_name);
             Scanner sc_test = new Scanner(test_file);
@@ -383,75 +419,83 @@ public class KnnMASS{
             System.err.println("Error open input file: " + e);
         }
 
+
+        // Start MASS
         MASS.setNodeFilePath(NODE_FILE);
 		MASS.setLoggingLevel(LogLevel.ERROR);
         MASS.init();
-
+        // Timer
         long start_time_all = System.currentTimeMillis();
 
+        // Init a 2D array to store the result of knn
         ArrayList<ArrayList<Node>> res = new ArrayList<ArrayList<Node>>();
         for(int i = 0; i < test_size; i ++){
             res.add(new ArrayList<Node>());
         }
 
+        // Init Places of size of train_group size
         Places knn_place = new Places(1, TrainGroup.class.getName(), null, train_size);
+        // Pass the whole train_group to Places, so each index of matrix corresponding to a 
+        // train node in the train_group
         Object[] train_group = group.get(1).toArray();
         knn_place.callAll(TrainGroup.init_, train_group);
 
+        // Timer to collect time used while computing distance over the matrix
         long compute_distance_time = 0;
+        // Timer to collect time used while collect nodes over the matrix
         long collect_node_time = 0;
 
         // For each target node
         for(int i = 0; i < test_size; i ++){
-            System.out.println(group.get(0).get(i));
             // Calculate each train node (in the matrix) distance to this target node
             long start_time_compute_dis = System.currentTimeMillis();
             knn_place.callAll(TrainGroup.computeDistance_, group.get(0).get(i));
             long end_time_compute_dis = System.currentTimeMillis();
+
             // Collect calculated distance from the matrix
             long start_time_collect_node = System.currentTimeMillis();
             Object[] temp = knn_place.callAll(TrainGroup.collectNode_, group.get(1).toArray());
             long end_time_collect_node = System.currentTimeMillis();
 
-            // for(Object x: temp){
-            //     System.out.println((Double) x);
-            // }
+            // Store the retured node array in the temp array, cast the Object element to Node element,
             ArrayList<Node> res_local = new ArrayList<Node>();
             for(Object x: temp){
                 res_local.add((Node) x);
             }
+
+            // Sort the temp array
             Collections.sort(res_local,  Comparator.comparing(Node::getDistance));
+
+            // Get the top K node
             for(int j = 0; j < k; j ++){
                 res.get(i).add(res_local.get(j));
             }
 
+            // Update timer
             compute_distance_time += end_time_compute_dis - start_time_compute_dis;
             collect_node_time += end_time_collect_node - start_time_collect_node;
         }
 
-        // for(int i = 0; i < test_size; i ++){
-        //     for(int j = 0; j < k; j ++){
-        //         System.out.print(res.get(i).get(j));
-        //     }
-        //     System.out.println();
-        // }
-
+        // Compute he new class for each target node by given top k neighbor nodes
         for(int i = 0; i < test_size; i ++){
             getNodeNewClassByTopKNeighbors(group.get(0).get(i), res.get(i).toArray(new Node[res.get(i).size()]));
         }
 
-        System.out.println();
-        for(Node n: group.get(0)){
-            System.out.println(n);
-        }
-
-        // writeKnnResultToFile(group.get(0).toArray(new Node[group.get(0).size()]), k);
-        writeKnnResultDetailsToFile(group.get(0), res, test_size, k);
-
         // Calculate the correctness
         double acc = evaluateKnnCorrectness(group.get(0).toArray(new Node[group.get(0).size()]));
-
+        // Stop the timer
         long end_time_all = System.currentTimeMillis();
+
+
+        // Optional to write result to file
+        if(WRITE_RESULT_TO_FILE > 0){
+            writeKnnResultToFile(group.get(0).toArray(new Node[group.get(0).size()]), k);
+        }
+        if(WRITE_RESULT_DETAILS_TO_FILE > 0){
+            writeKnnResultDetailsToFile(group.get(0), res, test_size, k);
+        }
+
+
         System.out.println("Accuracy: " + acc);
         System.out.println("Elapsed time (Total) = " + (end_time_all - start_time_all));
         System.out.println("Elapsed time (Compute Distance) = " + compute_distance_time);

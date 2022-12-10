@@ -10,10 +10,11 @@
  * KNN Graph in parallel programming.
  * Part 4: Parallel in MASS.
  * Version v2: Places + Agents.
- * ATTENTION: DISCARDED. Because we found that there will not be any improvement
- * of using (Agents + Places) instead of using Places only. The implementation
- * is not complete.
+ * ATTENTION: THIS PART IS DISCARDED AND THE IMPLEMENTATION IS IMCOMPLETE. 
+ * Because we found that there will not be any improvement
+ * of using (Agents + Places) instead of using Places only.
 */
+
 import java.io.*;
 import java.util.*;
 import java.nio.file.*;
@@ -33,8 +34,9 @@ import edu.uw.bothell.css.dsl.MASS.logging.LogLevel;
 public class KnnMASS_v2{
     //
     private static final String NODE_FILE = "nodes.xml";
-    private static final String OUTPUT_PATH = "./";
+    private static final String OUTPUT_PATH = "./output/";
 
+    
     public static class Node implements Serializable, Comparable<Node>{
         // Coordinates
         double x;
@@ -260,6 +262,7 @@ public class KnnMASS_v2{
             return false;
         }
     }
+
 
     static public boolean writeKnnResultDetailsToFile(ArrayList<Node> target_group, ArrayList<ArrayList<Node>> neighbor_group, int size, int k){
         try{
