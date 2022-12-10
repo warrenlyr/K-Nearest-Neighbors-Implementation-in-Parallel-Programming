@@ -1,15 +1,18 @@
 /*
  * -------------------------------------------------------------------------------------------------
- * KnnMASS.java
+ * KnnMASS_v2.java
  * Term: Autumn 2022
  * Class: CSS 534 – Parallel Programming In Grid And Cloud
  * HW: Program 5 - Final Project
  * Author: Warren Liu
- * Date: 12/07/2022
+ * Date: 12/09/2022
  * -------------------------------------------------------------------------------------------------
  * KNN Graph in parallel programming.
  * Part 4: Parallel in MASS.
- * Version v1: Places computation only.
+ * Version v2: Places + Agents.
+ * ATTENTION: DISCARDED. Because we found that there will not be any improvement
+ * of using (Agents + Places) instead of using Places only. The implementation
+ * is not complete.
 */
 import java.io.*;
 import java.util.*;
@@ -17,13 +20,17 @@ import java.nio.file.*;
 import java.lang.Math;
 import java.sql.Timestamp;
 
+import edu.uw.bothell.css.dsl.MASS.*;
+
 import edu.uw.bothell.css.dsl.MASS.MASS;
 import edu.uw.bothell.css.dsl.MASS.Place;
 import edu.uw.bothell.css.dsl.MASS.Places;
+import edu.uw.bothell.css.dsl.MASS.Agent;
+import edu.uw.bothell.css.dsl.MASS.Agents;
 import edu.uw.bothell.css.dsl.MASS.logging.LogLevel;
 
 
-public class KnnMASS{
+public class KnnMASS_v2{
     //
     private static final String NODE_FILE = "nodes.xml";
     private static final String OUTPUT_PATH = "./";
@@ -330,7 +337,49 @@ public class KnnMASS{
         }
     }
 
-    
+
+    public static class TestGroupAgent extends Agent{
+        public static final int init_ = 0;
+        public static final int move_ = 1;
+        public static final int calculateDistance_ = 2;
+
+        private ArrayList<Node> local_res = new ArrayList<Node>();
+        private Node node;
+
+        public TestGroupAgent(Object args) {}
+
+        public Object callMethod(int funcId, Object args){
+            switch(funcId){
+                case init_: return init(args);
+                case move_: return move(args);
+                case calculateDistance_: return calculateDistance(args);
+            }
+            return null;
+        }
+
+        public Object init(Object args){
+            this.node = (Node) args;
+            return null;
+        }
+
+        public Object move(Object args){
+            int curr_x = getPlace().getIndex()[0];
+
+            int size_x = getPlace().getSize()[0];
+
+            int new_x = curr_x + (int) args <= size_x - 1 ? curr_x + (int) args : 0;
+
+            System.out.println("I'm at (" + curr_x + "), I'm going to (" + new_x + ").");
+            migrate(new_x);
+            return null;
+        }
+
+        public Object calculateDistance(Object args){
+            return null;
+        }
+    }
+
+
     public static void main(String[] args) throws IOException{
         if(args.length < 3){
             System.err.println("Usage: mpirun -n <node#> java knnJavaMPI_v2 <input_test_group_file> <input_train_group_file> <top_k>");
@@ -398,64 +447,76 @@ public class KnnMASS{
         Object[] train_group = group.get(1).toArray();
         knn_place.callAll(TrainGroup.init_, train_group);
 
-        long compute_distance_time = 0;
-        long collect_node_time = 0;
+        Agents knn_agents = new Agents(2, TestGroupAgent.class.getName(), null, knn_place, test_size);
+        int step = test_size;
 
-        // For each target node
-        for(int i = 0; i < test_size; i ++){
-            System.out.println(group.get(0).get(i));
-            // Calculate each train node (in the matrix) distance to this target node
-            long start_time_compute_dis = System.currentTimeMillis();
-            knn_place.callAll(TrainGroup.computeDistance_, group.get(0).get(i));
-            long end_time_compute_dis = System.currentTimeMillis();
-            // Collect calculated distance from the matrix
-            long start_time_collect_node = System.currentTimeMillis();
-            Object[] temp = knn_place.callAll(TrainGroup.collectNode_, group.get(1).toArray());
-            long end_time_collect_node = System.currentTimeMillis();
+        knn_agents.callAll(TestGroupAgent.init_, group.get(0).get(0));
+        knn_agents.callAll(TestGroupAgent.move_, step);
+        
 
-            // for(Object x: temp){
-            //     System.out.println((Double) x);
-            // }
-            ArrayList<Node> res_local = new ArrayList<Node>();
-            for(Object x: temp){
-                res_local.add((Node) x);
-            }
-            Collections.sort(res_local,  Comparator.comparing(Node::getDistance));
-            for(int j = 0; j < k; j ++){
-                res.get(i).add(res_local.get(j));
-            }
-
-            compute_distance_time += end_time_compute_dis - start_time_compute_dis;
-            collect_node_time += end_time_collect_node - start_time_collect_node;
-        }
-
-        // for(int i = 0; i < test_size; i ++){
-        //     for(int j = 0; j < k; j ++){
-        //         System.out.print(res.get(i).get(j));
-        //     }
-        //     System.out.println();
+        // for(int i = 0; i < 10; i ++){
+        //     knn_agents.callAll(TestGroupAgent.move_);
+        //     knn_agents.manageAll();
         // }
 
-        for(int i = 0; i < test_size; i ++){
-            getNodeNewClassByTopKNeighbors(group.get(0).get(i), res.get(i).toArray(new Node[res.get(i).size()]));
-        }
+        // long compute_distance_time = 0;
+        // long collect_node_time = 0;
 
-        System.out.println();
-        for(Node n: group.get(0)){
-            System.out.println(n);
-        }
+        // // For each target node
+        // for(int i = 0; i < test_size; i ++){
+        //     System.out.println(group.get(0).get(i));
+        //     // Calculate each train node (in the matrix) distance to this target node
+        //     long start_time_compute_dis = System.currentTimeMillis();
+        //     knn_place.callAll(TrainGroup.computeDistance_, group.get(0).get(i));
+        //     long end_time_compute_dis = System.currentTimeMillis();
+        //     // Collect calculated distance from the matrix
+        //     long start_time_collect_node = System.currentTimeMillis();
+        //     Object[] temp = knn_place.callAll(TrainGroup.collectNode_, group.get(1).toArray());
+        //     long end_time_collect_node = System.currentTimeMillis();
 
-        // writeKnnResultToFile(group.get(0).toArray(new Node[group.get(0).size()]), k);
-        writeKnnResultDetailsToFile(group.get(0), res, test_size, k);
+        //     // for(Object x: temp){
+        //     //     System.out.println((Double) x);
+        //     // }
+        //     ArrayList<Node> res_local = new ArrayList<Node>();
+        //     for(Object x: temp){
+        //         res_local.add((Node) x);
+        //     }
+        //     Collections.sort(res_local,  Comparator.comparing(Node::getDistance));
+        //     for(int j = 0; j < k; j ++){
+        //         res.get(i).add(res_local.get(j));
+        //     }
 
-        // Calculate the correctness
-        double acc = evaluateKnnCorrectness(group.get(0).toArray(new Node[group.get(0).size()]));
+        //     compute_distance_time += end_time_compute_dis - start_time_compute_dis;
+        //     collect_node_time += end_time_collect_node - start_time_collect_node;
+        // }
+
+        // // for(int i = 0; i < test_size; i ++){
+        // //     for(int j = 0; j < k; j ++){
+        // //         System.out.print(res.get(i).get(j));
+        // //     }
+        // //     System.out.println();
+        // // }
+
+        // for(int i = 0; i < test_size; i ++){
+        //     getNodeNewClassByTopKNeighbors(group.get(0).get(i), res.get(i).toArray(new Node[res.get(i).size()]));
+        // }
+
+        // System.out.println();
+        // for(Node n: group.get(0)){
+        //     System.out.println(n);
+        // }
+
+        // // writeKnnResultToFile(group.get(0).toArray(new Node[group.get(0).size()]), k);
+        // writeKnnResultDetailsToFile(group.get(0), res, test_size, k);
+
+        // // Calculate the correctness
+        // double acc = evaluateKnnCorrectness(group.get(0).toArray(new Node[group.get(0).size()]));
 
         long end_time_all = System.currentTimeMillis();
-        System.out.println("Accuracy: " + acc);
+        // System.out.println("Accuracy: " + acc);
         System.out.println("Elapsed time (Total) = " + (end_time_all - start_time_all));
-        System.out.println("Elapsed time (Compute Distance) = " + compute_distance_time);
-        System.out.println("Elapsed time (Collect Node) = " + collect_node_time);
+        // System.out.println("Elapsed time (Compute Distance) = " + compute_distance_time);
+        // System.out.println("Elapsed time (Collect Node) = " + collect_node_time);
 
         MASS.finish();
     }
