@@ -1,4 +1,4 @@
-# CSS534 Final Project
+# K-Nearest Neighbors Implementation in Parallel Programming and Cloud Computing
 University Of Washington Bothell, Autumn 2022
 CSS 534: Parallel Programming In Grid And Cloud
 
