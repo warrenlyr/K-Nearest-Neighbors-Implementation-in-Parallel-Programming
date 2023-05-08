@@ -32,3 +32,7 @@ hdfs/
 *.csv
 MPI/performance/~$performance.xlsx
 MASS/mass-warren/performance/~$performance.xlsx
+
+# local folder that should not be pushed
+Lab5/
+TestFileGenerator/
