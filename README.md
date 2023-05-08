@@ -11,6 +11,6 @@ Term: Autumn 2022
 
 ## Project Division
 1. MPIJava: Warren Liu
-2. MapReduce: Yuan Ma
+2. MapReduce: Chris Ma
 3. Spark: Chengjun Xi
 4. MASS: Together
